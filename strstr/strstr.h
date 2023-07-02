@@ -1,0 +1,1 @@
+char *s21_strstr(const char *strB, const char *strA);
