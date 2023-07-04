@@ -1,6 +1,5 @@
 #include "s21_string.h"
 
-
 char *s21_strtok(char *str, const char *delim) {
   static char *next;
   register int ch;
@@ -19,21 +18,4 @@ char *s21_strtok(char *str, const char *delim) {
     *next++ = 0;
   }
   return str;
-}
-
-
-int main() {
-    char str[29] = "apple,banana,grape";
-    char del[5] = ",";
-
-    printf("str: %s\n", str);
-    char *p = s21_strtok(str, del);
-
-    while (p != NULL)
-    {
-        printf("%s\n",p);
-        p =  s21_strtok(NULL, del);
-    }
-    
-    return 0;
 }

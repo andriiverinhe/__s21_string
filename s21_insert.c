@@ -25,14 +25,3 @@ void *insert(const char *src, const char *str, size_t start_index){
     }
     return new_src ? (void*)new_src : NULL;
 }
-
-
-int main() {
-    
-    char *str =  "Mark, ";
-    char *str1 = "Rashford"; 
-
-    str = insert(str, str1, 2);
-    if(str) printf("%s\n", str);
-    return 0;
-    }

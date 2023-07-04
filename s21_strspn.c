@@ -21,8 +21,8 @@ size_t s21_strspn(const char *str1, const char *str2) {
 }
 
 int main(){
-    char *str1 = "00111987654321";
-    char *str2 = "01";
+    char *str1 =  "!@#$^&*()";
+    char *str2 =  "!@#$^&*()";
     printf("%ld\n", s21_strspn(str1, str2));
     printf("%ld\n", strspn(str1, str2));
     

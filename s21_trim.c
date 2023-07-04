@@ -53,19 +53,3 @@ void *trim(const char *src, const char *trim_chars) {
 
    return trimmed_str;
 }
-
-
-
-
-
-
-int main() {
-    
-    char *str =  "AAA12345AAAA";
-    char *str1 =  "A"; 
-
-    str = trim(str, str1);
-    if(str) printf("'%s'\n", str);
-    
-    return 0;
-    }
