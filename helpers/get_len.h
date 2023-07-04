@@ -1,1 +1,0 @@
-int get_len(char *str);
