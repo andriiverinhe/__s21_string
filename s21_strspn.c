@@ -19,12 +19,3 @@ size_t s21_strspn(const char *str1, const char *str2) {
     }
     return err? -1 : len;
 }
-
-int main(){
-    char *str1 =  "!@#$^&*()";
-    char *str2 =  "!@#$^&*()";
-    printf("%ld\n", s21_strspn(str1, str2));
-    printf("%ld\n", strspn(str1, str2));
-    
-   return 0; 
-}

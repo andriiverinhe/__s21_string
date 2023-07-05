@@ -1,36 +1,32 @@
 #include "sprintf.h"
-char *specifier_d_or_i(char *str, arg_info flags);
+
 int main() {
     // char str[100];
     // sprintf(str, "a dsa asda %e", 1.72);
-    arg_info flags = {1};
+    arg_info flags = {0};
     flags.system_of_computation = 10;
-    // get_size_for_decimal(&flags, 1233);
-    char str[15];
-    specifier_d_or_i(str, flags);
-    // printf("%s\n",str);
-    printf("Str: %s\n", str);
+    char str0[20] = {"\0"};
+    char str1[20] = {"\0"}; 
+    flags.l = 1;
+    flags.minus = 1;
+    flags.width = 0;
+    // specifier_c(str0, flags);
+    sprintf(str1, "%-lc", '1');
+    // str0[10] = '\0';s
+    printf("my_sprtf: '%s'\n", str0);
+    printf("st_sprtf: '%s'\n", str1);
     return 0;
 }
 
-int s21_sprintf(char *str, const char *format, ...) { 
-    
-    va_list argument;
-    va_start(argument, format);
-
-
-    va_end(argument);
-
-}
-
-char *specifier_d_or_i(char *str, arg_info flags) {
-    long int num = 148;
-    // if(flags.l)
-    //     num = (long int)va_arg(*arguments, long int);
-    // else if(flags.h)
-    //     num = (int)va_arg(*arguments, int);
-    // else
-    //     num = (int)va_arg(*arguments, int);
+//Start
+char *specifier_d_or_i(char *str, arg_info flags, va_list *arguments) {
+    long int num;
+    if(flags.l)
+        num = (long int)va_arg(*arguments, long int);
+    else if(flags.h)
+        num = (int)va_arg(*arguments, int);
+    else
+        num = (int)va_arg(*arguments, int);
         
     s21_size_t size_arr = get_size_for_decimal(&flags, num);
     
@@ -49,11 +45,6 @@ char *specifier_d_or_i(char *str, arg_info flags) {
     if(new_str) free(new_str);
     return str;
 }
-
-
-
-
-
 
 s21_size_t get_size_for_decimal(arg_info *flags, long int num) {
     s21_size_t result = 0;
@@ -152,3 +143,51 @@ int decimal_to_string(arg_info flags ,long int num, char *new_str, s21_size_t si
     }
     return i;
 }
+//END
+
+
+//START
+char specifier_c(char *str, arg_info flags, va_list *arguments) {
+    if(flags.l){
+        wchar_t w_c;
+        w_c = va_arg(*arguments, wchar_t);  
+        form_wchar(str, w_c, flags);
+    } else {
+        char ch;
+        ch = va_arg(*arguments, int);
+        form_char(str, ch, flags);
+    }
+}
+//flag l
+void form_wchar(char *str, wchar_t w_c, arg_info flags) {
+    if(!flags.minus && flags.width) {
+        char tmp[BUFF_SIZE] = {'\0'};
+        wcstombs(tmp, &w_c, BUFF_SIZE);
+        for(s21_size_t i = 0; i < flags.width - strlen(tmp); i++)
+            str[i] = ' ';
+        strcat(str, tmp);
+    } else if(flags.width) {
+        wcstombs(str, &w_c, BUFF_SIZE);
+        for(int i = strlen(str); i < flags.width; i++)
+            str[i] = ' ';
+    } else 
+        wcstombs(str, &w_c, BUFF_SIZE);
+}
+
+//standart size
+void form_char(char *str, char ch, arg_info flags) {
+    if(!flags.minus && flags.width) {
+        for(int i = 0; i < flags.width;i++) {
+            str[i] = ' ';
+            if(i == flags.width - 1)
+                str[i] = ch;
+        }
+    } else if(flags.width) {
+        str[0] = ch;
+        for(int i = 1; i < flags.width;i++)
+            str[i] = ' ';
+    } else
+        str[0] = ch;
+}
+
+//END
