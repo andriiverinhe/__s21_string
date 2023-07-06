@@ -33,12 +33,18 @@ typedef struct
 // specifier d and i
 s21_size_t get_size_for_decimal(arg_info *flags, long int num);
 int decimal_to_string(arg_info flags, long int num, char *new_str, s21_size_t size_arr);
-char *specifier_d_or_i(char *str, arg_info flags, va_list *arguments);
+void specifier_d_or_i(char *str, arg_info flags);
 
 
 //specifier c
 char specifier_c(char *str, arg_info flags, va_list *arguments);
 void form_wchar(char *str, wchar_t w_c, arg_info flags);
 void form_char(char *str, char ch, arg_info flags);
+//
+
+//specifier s
+  char specifier_s(char *str, arg_info flags);
+  void form_wchar_str(char *str,wchar_t *wchar_str, arg_info flags);
+  void form_char_str(char *str, char *va_str, arg_info flags);
 //
 #endif

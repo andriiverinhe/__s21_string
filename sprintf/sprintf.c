@@ -3,30 +3,33 @@
 int main() {
     // char str[100];
     // sprintf(str, "a dsa asda %e", 1.72);
-    arg_info flags = {0};
+    arg_info flags = {1};
     flags.system_of_computation = 10;
     char str0[20] = {"\0"};
     char str1[20] = {"\0"}; 
     flags.l = 1;
     flags.minus = 1;
-    flags.width = 0;
-    // specifier_c(str0, flags);
-    sprintf(str1, "%-lc", '1');
+    flags.width = 10;
+    specifier_d_or_i(str0, flags);
+    sprintf(str1, "%+-10ld", (long int)145);
     // str0[10] = '\0';s
     printf("my_sprtf: '%s'\n", str0);
     printf("st_sprtf: '%s'\n", str1);
     return 0;
 }
 
+
+
+
 //Start
-char *specifier_d_or_i(char *str, arg_info flags, va_list *arguments) {
-    long int num;
-    if(flags.l)
-        num = (long int)va_arg(*arguments, long int);
-    else if(flags.h)
-        num = (int)va_arg(*arguments, int);
-    else
-        num = (int)va_arg(*arguments, int);
+void specifier_d_or_i(char *str, arg_info flags) {
+    long int num = 145;
+    // if(flags.l)
+    //     num = (long int)va_arg(*arguments, long int);
+    // else if(flags.h)
+    //     num = (int)va_arg(*arguments, int);
+    // else
+    //     num = (int)va_arg(*arguments, int);
         
     s21_size_t size_arr = get_size_for_decimal(&flags, num);
     
@@ -38,12 +41,11 @@ char *specifier_d_or_i(char *str, arg_info flags, va_list *arguments) {
         }
         str[i] = '\0';
         while(i < flags.width){
-            *str = ' ';
-            str++;
+            str[i++] = ' ';
         }
     }
     if(new_str) free(new_str);
-    return str;
+    // return str;
 }
 
 s21_size_t get_size_for_decimal(arg_info *flags, long int num) {
@@ -158,7 +160,7 @@ char specifier_c(char *str, arg_info flags, va_list *arguments) {
         form_char(str, ch, flags);
     }
 }
-//flag l
+//flag l in s
 void form_wchar(char *str, wchar_t w_c, arg_info flags) {
     if(!flags.minus && flags.width) {
         char tmp[BUFF_SIZE] = {'\0'};
@@ -189,5 +191,65 @@ void form_char(char *str, char ch, arg_info flags) {
     } else
         str[0] = ch;
 }
+//END
 
+
+
+//START flag s 
+char specifier_s(char *str, arg_info flags) {
+    if(flags.l) {
+        wchar_t *wchar_str = (wchar_t *)"str_wchar";
+        printf("%ls\n", wchar_str);
+        // wchar_str = va_arg(*arguments, wchar_t *);
+        form_wchar_str(str, wchar_str, flags);
+    } else {
+        char *va_str = "str_char";
+        // va_str = va_arg(*arguments, char *);
+        form_char_str(str, va_str, flags);
+    }
+}
+
+// flag l in s 
+void form_wchar_str(char *str,wchar_t *wchar_str, arg_info flags) {
+    char tmp[BUFF_SIZE] = {'\0'};
+    char str_wcstombs[BUFF_SIZE] = {'\0'};
+    wcstombs(str_wcstombs, wchar_str, BUFF_SIZE);
+    strcpy(tmp, str_wcstombs);
+
+    if(flags.precision)
+        tmp[flags.precision] = '\0';
+    
+    int shift = flags.width - strlen(tmp);
+    int tmp_len = strlen(tmp);
+
+    if(flags.minus && shift > 0) {
+        strcpy(str, tmp);
+        memset(str + tmp_len, ' ', shift);
+    } else if(shift > 0) {
+        memset(str, ' ', shift);
+        strcpy(str + shift, tmp);
+    } else {
+        strcpy(str, tmp);
+    }
+}
+
+void form_char_str(char *str, char *va_str, arg_info flags) {
+    char tmp[BUFF_SIZE] = {'\0'};
+    strcpy(tmp , va_str);
+    
+    if(flags.precision) 
+        tmp[flags.precision] = '\0';
+
+    int shift = flags.width - strlen(tmp);
+    int tmp_len = strlen(tmp);
+
+    if(flags.minus && shift > 0) {
+        strcpy(str, tmp);
+        memset(str + tmp_len, ' ', shift);
+    } else if(shift > 0){
+        memset(str, ' ', shift);
+        strcpy(str + shift, tmp);
+    } else
+        strcpy(str, tmp);
+}
 //END
