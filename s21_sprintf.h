@@ -3,6 +3,10 @@
 
 #include <stdbool.h>
 
+const char valid_specifiers[] = "cdieEfgGosuxXpn";
+
+const char allowed_chars[] = "hlL0123456789#-+.* ";
+
 typedef struct 
 {
   // flags
