@@ -1,7 +1,8 @@
 #include "s21_sprintf.h"
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
+
+bool (*specifier_funcs[])(char *, arg_info, va_list) = {specifier_c, specifier_s};
+const char valid_specifiers[] = "csdieEfgGouxXpn";
+const char allowed_chars[] = "hlL0123456789#-+.* ";
 
 arg_info give_flag_struct() {
   arg_info s_arg_info = {.precision = NULL,
@@ -247,46 +248,49 @@ char *parse_format_arg(arg_info *s_arg_inf, va_list args, char *ch_now,
 int s21_sprintf(char *str, char *format, ...) {
   va_list args;
   va_start(args, format);
-
+  int i = 0;
+  bool error = false;
   while (*format != '\0') {
     if (*format == '%') {
       format++;
 
       arg_info s_arg_info = give_flag_struct();
       int func_ind;
-      bool error = false;
       format = parse_format_arg(&s_arg_info, args, format, &func_ind);
       if (format != NULL) {
         // if format not NULL it is safe to pass args to utility functions
         // debugging prints
-        printf("Call function from arr by index %d\n", func_ind);
-        printf("STRUCT\n "
-               "plus:%d\nminus:%d\nspace:%d\nzeroes:%d\nhash:%d\nh:%d\nl:%d\nL:"
-               "%d\n",
-               s_arg_info.plus, s_arg_info.minus, s_arg_info.space,
-               s_arg_info.zeros, s_arg_info.hash, s_arg_info.h, s_arg_info.l,
-               s_arg_info.L);
-        if (s_arg_info.precision != NULL)
-          printf("prec:%d\n", *s_arg_info.precision);
-        if (s_arg_info.width != NULL)
-          printf("width:%d\n", *s_arg_info.width);
+        error = (*specifier_funcs[func_ind])(str, s_arg_info, args);
+        // printf("Call function from arr by index %d\n", func_ind);
+        // printf("STRUCT\n "
+        //        "plus:%d\nminus:%d\nspace:%d\nzeroes:%d\nhash:%d\nh:%d\nl:%d\nL:"
+        //        "%d\n",
+        //        s_arg_info.plus, s_arg_info.minus, s_arg_info.space,
+        //        s_arg_info.zeros, s_arg_info.hash, s_arg_info.h, s_arg_info.l,
+        //        s_arg_info.L);
+        // if (s_arg_info.precision != NULL)
+        //   printf("prec:%d\n", *s_arg_info.precision);
+        // if (s_arg_info.width != NULL)
+        //   printf("width:%d\n", *s_arg_info.width);
         // end debugging prints
+        while (str[i] != '\0') i++;
       } else {
-        printf("Incorrect flag use in formatting");
+        printf("Incorrect flag use in formatting\n");
         error = true;
       }
-      printf("next arg: %d\n", va_arg(args, int));
-      if (s_arg_info.precision != NULL)
+      // printf("next arg: %d\n", va_arg(args, int));
+      if (s_arg_info.precision)
         free(s_arg_info.precision);
-      if (s_arg_info.width != NULL)
+      if (s_arg_info.width)
         free(s_arg_info.width);
-      if (error)
+      if (error) {
+        str[0] = '\0';
         break;
+      }
       format++;
+    } else {
+      str[i++] = *format++;
     }
-    *str = *format;
-    str++;
-    format++;
   }
 
   va_end(args);
@@ -297,8 +301,8 @@ int main(void) {
   char out[100] = "";
   // char in[50];
   // scanf("%s", in);
-  char in[] = "%+0*.*lf";
-  s21_sprintf(out, in, 10, 15);
+  char in[] = "%lc %s first string";
+  s21_sprintf(out, in, L'Ċ', "");
   printf("%s", out);
   return 0;
 }
