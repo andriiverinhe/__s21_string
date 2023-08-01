@@ -1,7 +1,6 @@
 #include "s21_sprintf.h"
 
-bool (*specifier_funcs[])(char *, arg_info, va_list) = {specifier_c, specifier_s};
-const char valid_specifiers[] = "csdieEfgGouxXpn";
+const char valid_specifiers[] = "csdiuxXopfeEgGn";
 const char allowed_chars[] = "hlL0123456789#-+.* ";
 
 arg_info give_flag_struct() {
@@ -14,6 +13,7 @@ arg_info give_flag_struct() {
                          .hash = false,
                          .h = false,
                          .l = false,
+                         .ll = false,
                          .L = false};
   return s_arg_info;
 }
@@ -33,8 +33,7 @@ int is_valid_specifier(char ch_now) {
 bool is_symbol_forbidden(char ch_now) {
   int i = -1;
   while (allowed_chars[++i] != '\0') {
-    if (ch_now == allowed_chars[i])
-      return false;
+    if (ch_now == allowed_chars[i]) return false;
   }
   return true;
 }
@@ -49,8 +48,10 @@ bool are_we_far_in_format(arg_info *s_arg_inf) {
 bool is_space(char ch_now, arg_info *s_arg_inf, bool pr, bool wd) {
   if (ch_now == ' ') {
     if (s_arg_inf->plus || are_we_far_in_format(s_arg_inf) ||
-        s_arg_inf->space || pr || wd)
+        s_arg_inf->space || pr || wd) {
+      s_arg_inf->plus = false;
       return true;
+    }
     s_arg_inf->space = true;
   }
   return false;
@@ -79,8 +80,7 @@ bool is_minus(char ch_now, arg_info *s_arg_inf, bool pr, bool wd) {
 bool is_zero(char ch_now, arg_info *s_arg_inf, bool pr, bool wd, bool ap,
              bool aw) {
   if (ch_now == '0') {
-    if ((aw && !pr) || ap)
-      return true;
+    if ((aw && !pr) || ap) return true;
     if (pr) {
       int z = 0;
       if (s_arg_inf->precision == NULL) {
@@ -102,8 +102,7 @@ bool is_zero(char ch_now, arg_info *s_arg_inf, bool pr, bool wd, bool ap,
 
 bool is_dot(char ch_now, arg_info *s_arg_inf, bool *pr, bool *wd) {
   if (ch_now == '.') {
-    if (*pr || s_arg_inf->h || s_arg_inf->L || s_arg_inf->l)
-      return true;
+    if (*pr || s_arg_inf->h || s_arg_inf->L || s_arg_inf->l) return true;
     *wd = false;
     *pr = true;
   }
@@ -116,8 +115,7 @@ bool is_non_zero_num(char ch_now, arg_info *s_arg_inf, bool *pr, bool *wd,
     int i_ch = ch_now - '0';
     if (s_arg_inf->h || s_arg_inf->L || s_arg_inf->l || (aw && !(*pr)) || ap)
       return true;
-    if (!(*wd) && !(*pr) && s_arg_inf->width == NULL)
-      *wd = true;
+    if (!(*wd) && !(*pr) && s_arg_inf->width == NULL) *wd = true;
     if (*wd) {
       if (s_arg_inf->width == NULL) {
         s_arg_inf->width = malloc(sizeof(int));
@@ -172,37 +170,51 @@ bool is_ast(char ch_now, arg_info *s_arg_inf, va_list arg_l, bool *pr, bool wd,
 
 bool is_letter(char ch_now, arg_info *s_arg_inf, bool *pr, bool *wd) {
   if (ch_now == 'L' || ch_now == 'l' || ch_now == 'h') {
-    if (s_arg_inf->h || s_arg_inf->L || s_arg_inf->l)
+    if (s_arg_inf->h || s_arg_inf->L || ((ch_now != 'l') && (s_arg_inf->l)) ||
+        s_arg_inf->ll)
       return true;
-    if (*pr)
-      *pr = false;
-    if (*wd)
-      *wd = false;
-    if (ch_now == 'L')
-      s_arg_inf->L = true;
-    if (ch_now == 'l')
-      s_arg_inf->l = true;
-    if (ch_now == 'h')
-      s_arg_inf->h = true;
+    if (*pr) *pr = false;
+    if (*wd) *wd = false;
+    if (ch_now == 'L') s_arg_inf->L = true;
+    if (ch_now == 'l') {
+      if (!s_arg_inf->l)
+        s_arg_inf->l = true;
+      else
+        s_arg_inf->ll = true;
+    }
+    if (ch_now == 'h') s_arg_inf->h = true;
   }
   return false;
 }
 
 bool is_not_valid_combo(char spcf, arg_info *s_arg_inf) {
+  bool error = false;
   if (s_arg_inf->hash && (spcf != 'o' && spcf != 'x' && spcf != 'X' &&
                           spcf != 'e' && spcf != 'E' && spcf != 'f'))
-    return true;
-  if (s_arg_inf->precision && spcf == 'c')
-    return true;
+    error = true;
+  if (s_arg_inf->precision && (spcf == 'c' || spcf == 'p')) error = true;
   if (s_arg_inf->h &&
-      (spcf == 'c' || spcf == 'n' || spcf == 's' || spcf == 'p'))
-    return true;
-  if (s_arg_inf->l && (spcf == 'n' || spcf == 'p'))
-    return true;
+      (spcf == 'c' || spcf == 's' || spcf == 'p' || spcf == 'f'))
+    error = true;
+  if (s_arg_inf->l && (spcf == 'p' || spcf == 'f')) error = true;
   if (s_arg_inf->L &&
-      (spcf != 'e' || spcf != 'E' || spcf != 'f' || spcf != 'g' || spcf != 'G'))
-    return true;
-  return false;
+      (spcf != 'e' && spcf != 'E' && spcf != 'f' && spcf != 'g' && spcf != 'G'))
+    error = true;
+  if ((spcf == 's' || spcf == 'c' || spcf == 'p') &&
+      (s_arg_inf->zeros || s_arg_inf->space || s_arg_inf->plus)) {
+    s_arg_inf->zeros = false;
+    s_arg_inf->space = false;
+    s_arg_inf->plus = false;
+    error = true;
+  }
+  if (s_arg_inf->zeros && s_arg_inf->precision &&
+      (spcf == 'd' || spcf == 'i' || spcf == 'o' || spcf == 'x' ||
+       spcf == 'X' || spcf == 'u')) {
+    error = true;
+    s_arg_inf->zeros = false;
+  }
+  if ((s_arg_inf->space || s_arg_inf->plus) && spcf == 'u') error = true;
+  return error;
 }
 
 char *parse_format_arg(arg_info *s_arg_inf, va_list args, char *ch_now,
@@ -213,6 +225,7 @@ char *parse_format_arg(arg_info *s_arg_inf, va_list args, char *ch_now,
   bool ast_pr = false;
   bool ast_wd = false;
   bool set_pr_to_zero = false;
+  bool error = false;
 
   while ((i = is_valid_specifier(*ch_now)) == -1) {
     // any error returns true
@@ -228,9 +241,8 @@ char *parse_format_arg(arg_info *s_arg_inf, va_list args, char *ch_now,
         is_zero(*ch_now, s_arg_inf, append_pr, append_width, ast_pr, ast_wd) ||
         is_non_zero_num(*ch_now, s_arg_inf, &append_pr, &append_width, ast_pr,
                         ast_wd))
-      return (ch_now = NULL);
-    if (append_pr)
-      set_pr_to_zero = true;
+      error = true;
+    if (append_pr) set_pr_to_zero = true;
     i++;
     ch_now++;
   }
@@ -240,69 +252,9 @@ char *parse_format_arg(arg_info *s_arg_inf, va_list args, char *ch_now,
     *s_arg_inf->precision = z;
   }
   *func_ind = i;
-  if (is_not_valid_combo(valid_specifiers[i], s_arg_inf))
-    return NULL;
-  return ch_now;
-}
-
-int s21_sprintf(char *str, char *format, ...) {
-  va_list args;
-  va_start(args, format);
-  int i = 0;
-  bool error = false;
-  while (*format != '\0') {
-    if (*format == '%') {
-      format++;
-
-      arg_info s_arg_info = give_flag_struct();
-      int func_ind;
-      format = parse_format_arg(&s_arg_info, args, format, &func_ind);
-      if (format != NULL) {
-        // if format not NULL it is safe to pass args to utility functions
-        // debugging prints
-        error = (*specifier_funcs[func_ind])(str, s_arg_info, args);
-        // printf("Call function from arr by index %d\n", func_ind);
-        // printf("STRUCT\n "
-        //        "plus:%d\nminus:%d\nspace:%d\nzeroes:%d\nhash:%d\nh:%d\nl:%d\nL:"
-        //        "%d\n",
-        //        s_arg_info.plus, s_arg_info.minus, s_arg_info.space,
-        //        s_arg_info.zeros, s_arg_info.hash, s_arg_info.h, s_arg_info.l,
-        //        s_arg_info.L);
-        // if (s_arg_info.precision != NULL)
-        //   printf("prec:%d\n", *s_arg_info.precision);
-        // if (s_arg_info.width != NULL)
-        //   printf("width:%d\n", *s_arg_info.width);
-        // end debugging prints
-        while (str[i] != '\0') i++;
-      } else {
-        printf("Incorrect flag use in formatting\n");
-        error = true;
-      }
-      // printf("next arg: %d\n", va_arg(args, int));
-      if (s_arg_info.precision)
-        free(s_arg_info.precision);
-      if (s_arg_info.width)
-        free(s_arg_info.width);
-      if (error) {
-        str[0] = '\0';
-        break;
-      }
-      format++;
-    } else {
-      str[i++] = *format++;
-    }
+  if (is_not_valid_combo(valid_specifiers[i], s_arg_inf)) error = true;
+  if (error) {
+    printf("Incorrect flag use in formatting or used invalid specifier.\n");
   }
-
-  va_end(args);
-  return 0;
-}
-
-int main(void) {
-  char out[100] = "";
-  // char in[50];
-  // scanf("%s", in);
-  char in[] = "%lc %s first string";
-  s21_sprintf(out, in, L'Ċ', "");
-  printf("%s", out);
-  return 0;
+  return ch_now;
 }

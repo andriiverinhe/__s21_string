@@ -1,144 +1,156 @@
 #include "s21_sprintf.h"
 
-bool specifier_s(char *str_out, arg_info s_arg_inf, va_list va_list)
-{
-  if (s_arg_inf.l)
-  {
+bool specifier_s(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  if (s_arg_inf->l) {
     wchar_t *wchar_str = va_arg(va_list, wchar_t *);
-    if (wstr_to_str(str_out, wchar_str, s_arg_inf))
-      return true;
-  }
-  else
-  {
+    if (wstr_to_str(str_out, wchar_str, *s_arg_inf)) return true;
+  } else {
     char *str_arg = va_arg(va_list, char *);
-    str_to_str(str_out, str_arg, s_arg_inf);
+    str_to_str(str_out, str_arg, *s_arg_inf);
   }
   return false;
 }
 
-bool specifier_c(char *str_out, arg_info s_arg_inf, va_list va_list)
-{
-  if (s_arg_inf.l)
-  {
+bool specifier_c(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  if (s_arg_inf->l) {
     wchar_t one_char = va_arg(va_list, wchar_t);
-    if (wchar_to_str(str_out, one_char, s_arg_inf))
-      return true;
-  }
-  else
-  {
+    return wchar_to_str(str_out, one_char, s_arg_inf);
+  } else {
     char one_char = va_arg(va_list, int);
-    char_to_str(str_out, one_char, s_arg_inf);
+    return char_to_str(str_out, one_char, s_arg_inf);
   }
   return false;
 }
 
-int s21_wctomb(char *dest, wchar_t wc)
-{
-  if (wc < 0x80)
-  {
-    *dest = (char)wc;
-    return 1;
-  }
-  return 0;
-}
-
-int wstr_len(wchar_t *str)
-{
-  int len = 0;
-  while (*str++ != '\0')
-    len++;
-  return len;
-}
-
-void adjust_width_str(char *str_out, char *temp, arg_info s_arg_inf)
-{
-  if (s_arg_inf.width)
-  {
-    int shift = *s_arg_inf.width - strlen(temp);
-
-    if (s_arg_inf.minus && shift > 0)
-    {
-      strcat(str_out, temp);
-      int out_len = strlen(str_out);
-      memset(str_out + out_len, ' ', shift);
-    }
-    else if (shift > 0)
-    {
-      int out_len = strlen(str_out);
-      memset(str_out + out_len, ' ', shift);
-      strcat(str_out, temp);
-    }
-    else
-    {
-      strcat(str_out, temp);
-    }
-  }
-  else
-    strcat(str_out, temp);
-}
-
-bool wstr_to_str(char *str_out, wchar_t *wchstr, arg_info s_arg_inf)
-{
-  int error = false;
-  if (s_arg_inf.precision)
-    wchstr[*s_arg_inf.precision] = '\0';
-  int w_str_s = wstr_len(wchstr);
-  if (w_str_s) {
-    char *temp = malloc(w_str_s * 4);
-    int ind = 0;
-    while (*wchstr != '\0')
-    {
-      ind += s21_wctomb(temp + ind, *wchstr++);
-      if (!ind)
-        break;
-    }
-    if (!ind)
-      error = true;
-    adjust_width_str(str_out, temp, s_arg_inf);
-    free(temp);
-  }
-  return error;
-}
-
-void str_to_str(char *str_out, char *str_arg, arg_info s_arg_inf)
-{
-  int str_arg_len = strlen(str_arg);
-  if (s_arg_inf.precision && *s_arg_inf.precision < str_arg_len)
-    str_arg[*s_arg_inf.precision] = '\0';
-  if (str_arg_len) {
-    char *temp = malloc(str_arg_len);
-    int i = -1;
-    while (str_arg[++i] != '\0')
-      temp[i] = str_arg[i];
-    adjust_width_str(str_out, temp, s_arg_inf);
-    free(temp);
-  }
-}
-
-bool wchar_to_str(char *str_out, wchar_t ch, arg_info s_arg_info)
-{
+bool specifier_i_or_d(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  arg_int arg_int;
   bool error = false;
-  char *temp = malloc(2);
-  if (!s21_wctomb(temp, ch))
-    error = true;
-  adjust_width_str(str_out, temp, s_arg_info);
-  free(temp);
+  if (s_arg_inf->ll) {
+    arg_int = va_arg(va_list, long long int);
+    if (arg_int <= LONG_MAX && arg_int >= LONG_MIN) {
+      printf("The function expects long long int!\n");
+      error = true;
+    }
+  } else if (s_arg_inf->l) {
+    arg_int = va_arg(va_list, long int);
+    if (arg_int > LONG_MAX || arg_int < LONG_MIN) {
+      printf("The function expects long int, but long long int was given\n");
+      error = true;
+    }
+    if (arg_int <= INT_MAX && arg_int >= INT_MIN) {
+      printf("The function expects long int, but int was given\n");
+      error = true;
+    }
+  } else if (s_arg_inf->h) {
+    // воспроизвести overflow состояние оригинальной функции
+    short sh = va_arg(va_list, int);
+    arg_int = sh;
+  } else {
+    arg_int = va_arg(va_list, int);
+    if (arg_int > INT_MAX || arg_int < INT_MIN) {
+      printf("The function expects int!\n");
+      error = true;
+    }
+  }
+  if (!error)
+    process_int(str_out, arg_int, *s_arg_inf);
   return error;
 }
 
-void char_to_str(char *str_out, char ch, arg_info s_arg_info)
-{
-  char *temp = malloc(2);
-  temp[0] = ch;
-  adjust_width_str(str_out, temp, s_arg_info);
-  free(temp);
+bool specifier_u(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  return get_u_arg(str_out, *s_arg_inf, va_list, 'u');
 }
 
-// int main()
-// {
-//   char testing[100] = "";
+bool specifier_x(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  return get_u_arg(str_out, *s_arg_inf, va_list, 'x');
+}
 
-//   char *new = specifier_s(testing, give_flag_struct());
-//   printf("%s", new);
-//   return 0;
-// }
+bool specifier_X(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  return get_u_arg(str_out, *s_arg_inf, va_list, 'X');
+}
+
+bool specifier_o(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  return get_u_arg(str_out, *s_arg_inf, va_list, 'o');
+}
+
+bool specifier_p(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  uintptr_t address = va_arg(va_list, uintptr_t);
+  char buffer[20];
+  int len = 0;
+
+  while (address != 0) {
+    int remainder = address % 16;
+    char hex_digit = (remainder < 10) ? remainder + '0' : remainder - 10 + 'a';
+    buffer[len++] = hex_digit;
+    address /= 16;
+  }
+  buffer[len++] = 'x';
+  buffer[len++] = '0';
+  reverse(buffer, len);
+  buffer[len] = '\0';
+  add_width_to_out(str_out, buffer, *s_arg_inf);
+  return false;
+}
+
+bool specifier_f(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  bool error = false;
+  if (s_arg_inf->L) {
+    ld arg_d = va_arg(va_list, long double);
+    if (isnanf(arg_d)) {
+      error = true;
+    }
+    if (!error)
+      process_ldouble(str_out, arg_d, *s_arg_inf);
+  } else {
+    double arg_d = va_arg(va_list, double);
+    if (isnanf(arg_d)) {
+      error = true;
+    }
+    if (!error)
+      process_double(str_out, arg_d, *s_arg_inf);
+  }
+
+  return error;
+}
+
+bool specifier_e(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  return get_eg_arg(str_out, *s_arg_inf, va_list, 'e');
+}
+
+bool specifier_E(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  return get_eg_arg(str_out, *s_arg_inf, va_list, 'E');
+}
+
+bool specifier_G(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  return get_eg_arg(str_out, *s_arg_inf, va_list, 'G');
+}
+
+bool specifier_g(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  return get_eg_arg(str_out, *s_arg_inf, va_list, 'g');
+}
+
+bool specifier_n(char *str_out, arg_info *s_arg_inf, va_list va_list) {
+  bool error = false;
+  int len = strlen(str_out);
+  if (s_arg_inf->ll) {
+    arg_int *arg_i = va_arg(va_list, long long int *);
+    if (arg_i == NULL)
+      error = true;
+    else 
+      *arg_i = len;
+  } else if (s_arg_inf->l) {
+    long int *arg_i = va_arg(va_list, long int *);
+    if (arg_i == NULL)
+      error = true;
+    else 
+      *arg_i = len;
+  } else {
+    int *arg_i = va_arg(va_list, int *);
+    if (arg_i == NULL)
+      error = true;
+    else 
+      *arg_i = len;
+  }
+  return error;
+}
+
