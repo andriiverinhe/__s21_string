@@ -50,14 +50,17 @@ bool wchar_to_str(char *str_out, wchar_t ch, arg_info *s_arg_inf) {
 
 bool char_to_str(char *str_out, char ch, arg_info *s_arg_inf) {
   char *temp = calloc(2, 1);
+  bool error = false;
   temp[0] = ch;
-  add_width_to_out(str_out, temp, *s_arg_inf);
-  free(temp);
+
   if (!(int)ch) {
-    s_arg_inf->null_char = strlen(str_out);
-    return true;
+    error = true;
+    if (s_arg_inf->width) (*s_arg_inf->width)--;
   }
-  return false;
+  add_width_to_out(str_out, temp, *s_arg_inf);
+  if (error) s_arg_inf->null_char = strlen(str_out);
+  free(temp);
+  return error;
 }
 
 int s21_wctomb(char *dest, wchar_t wc) {
@@ -475,12 +478,16 @@ void add_width_to_out(char *str_out, char *temp, arg_info s_arg_inf) {
     int shift = *s_arg_inf.width - strlen(temp);
     if (s_arg_inf.minus && shift > 0) {
       strcat(str_out, temp);
-      int out_len = strlen(str_out) + (temp[0] == '\0');
-      memset(str_out + out_len, ' ', shift);
+      int out_len = strlen(str_out);
+      if (!(temp[0] == '\0')) {
+        memset(str_out + out_len, ' ', shift);
+        str_out[out_len + shift] = '\0';
+      }
       added = true;
     } else if (shift > 0) {
       int out_len = strlen(str_out);
       memset(str_out + out_len, ' ', shift);
+      str_out[out_len + shift] = '\0';
       strcat(str_out, temp);
       added = true;
     }

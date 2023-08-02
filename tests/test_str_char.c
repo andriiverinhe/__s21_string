@@ -126,10 +126,23 @@ START_TEST(c1_norm) {
   char sys[1000] = "";
   for (int ch = 0; ch < 255; ch++) {
     for (int f = 0; f < 11; f++) {
-      s21_sprintf(my, c_in[f], 'f', (char)ch, ch, f);
-      sprintf(sys, c_in[f], 'f', (char)ch, ch, f);
+      s21_sprintf(my, c_in[f], (char) ch, (char)ch, ch, f);
+      sprintf(sys, c_in[f], (char) ch, (char)ch, ch, f);
       ck_assert_str_eq(my, sys);
     }
+  }
+}
+END_TEST
+
+START_TEST(c2_args) {
+  char my[100000] = "";
+  char sys[100000] = "";
+  char str[] = "also some string to add";
+  char f[] = "%*c %*c %*c %c %c %c %c %s";
+  for (int ch = 0; ch < 255; ch++) {
+    s21_sprintf(my, f, ch, ch, ch, ch, ch, ch, ch, ch, ch, ch, str);
+    sprintf(sys, f, ch, ch, ch, ch, ch, ch, ch, ch, ch, ch, str);
+    ck_assert_str_eq(my, sys);
   }
 }
 END_TEST
@@ -145,6 +158,7 @@ Suite *suit(void) {
   tcase_add_test(tc, s6_big);
   TCase *tc2 = tcase_create("char");
   tcase_add_test(tc2, c1_norm);
+  tcase_add_test(tc2, c2_args);
   suite_add_tcase(s, tc);
   suite_add_tcase(s, tc2);
   return s;
