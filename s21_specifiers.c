@@ -111,22 +111,13 @@ bool specifier_n(char *str_out, arg_info *s_arg_inf, va_list va_list) {
   int len = strlen(str_out);
   if (s_arg_inf->ll) {
     arg_int *arg_i = va_arg(va_list, long long int *);
-    if (arg_i == NULL)
-      error = true;
-    else
-      *arg_i = len;
+    *arg_i = len;
   } else if (s_arg_inf->l) {
     long int *arg_i = va_arg(va_list, long int *);
-    if (arg_i == NULL)
-      error = true;
-    else
-      *arg_i = len;
+    *arg_i = len;
   } else {
     int *arg_i = va_arg(va_list, int *);
-    if (arg_i == NULL)
-      error = true;
-    else
-      *arg_i = len;
+    *arg_i = len;
   }
   return error;
 }

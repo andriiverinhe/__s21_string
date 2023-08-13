@@ -2,7 +2,7 @@
 
 char *int_in[] = {"%d %d %d f:%d",
                   "%.0d %.d % d f:%+0d\n",
-                  "%+hd % hd %-40hd f:%-0d\n",
+                  "%+ hd % hd %-40hd f:%-0d\n",
                   "%-1d % 1d %.1d f:% 0d\n",
                   "%+1d %050d %+050d f:%+- 0d\n",
                   "%-050d % 050d % .50d f:%d\n",

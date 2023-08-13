@@ -118,6 +118,25 @@ START_TEST(t7) {
 }
 END_TEST
 
+
+START_TEST(t8) {
+  double str = 123456.789;
+  double str2 = -9876.54321;
+  double g = 0.12345;
+  char out_my[1000] = "";
+  char out_sys[1000] = "";
+  long int res = 0;
+  long int sres = 0;
+  long long int res1 = 0;
+  long long int sres1 = 0;
+  s21_sprintf(out_my, "%g %f %e %ln %lln some string\n", g, str2, str, &res, &res1);
+  sprintf(out_sys, "%g %f %e %ln %lln some string\n", g, str2, str, &sres, &sres1);
+  ck_assert_str_eq(out_my, out_sys);
+  ck_assert_int_eq(res, sres);
+  ck_assert_int_eq(res1, sres1);
+}
+END_TEST
+
 Suite *suit(void) {
   Suite *s = suite_create("n spec");
   TCase *tc = tcase_create("n case");
@@ -128,6 +147,7 @@ Suite *suit(void) {
   tcase_add_test(tc, t5);
   tcase_add_test(tc, t6);
   tcase_add_test(tc, t7);
+  tcase_add_test(tc, t8);
   suite_add_tcase(s, tc);
   return s;
 }

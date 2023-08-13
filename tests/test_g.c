@@ -12,13 +12,13 @@ char *g_in[] = {"%#g %g %g g:%g",
                 "%+050.10g % 050.10g %-50.10g g:%g\n",
                 "%#+50.10g %# 40.10g %#-40.15g g:%g\n"};
 
-char *lg_in[] = {"%#Lg %Lg %Lg Lg:%Lg",
+char *lg_in[] = {"%#Lg %LG %Lg Lg:%LG",
                  "%#.0Lg %#.Lg %# Lg Lg:%+0Lg\n",
-                 "%+Lg % Lg %-40Lg Lg:%-0Lg\n",
+                 "%+LG % Lg %-40LG Lg:%-0Lg\n",
                  "%-1Lg % 1Lg %.1Lg Lg:% 0Lg\n",
-                 "%+1Lg %050Lg %#+050Lg Lg:%+- 0Lg\n",
+                 "%+1Lg %050LG %#+050Lg Lg:%+- 0Lg\n",
                  "%-050Lg % 050Lg % .8Lg Lg:%Lg\n",
-                 "%+.10Lg %-.10Lg % 100.10Lg Lg:%Lg\n",
+                 "%+.10Lg %-.10LG % 100.10LG Lg:%Lg\n",
                  "%+10.9Lg % 10.9Lg %-10.9Lg Lg:%Lg\n",
                  "%+010.9Lg % 010.9Lg %-010.12Lg Lg:%Lg\n",
                  "%+050.15Lg % 50.10Lg %-50.10Lg Lg:%Lg\n",
@@ -98,7 +98,7 @@ END_TEST
 START_TEST(t6_lpos) {
   char my[10000] = "";
   char sys[10000] = "";
-  for (long double i = 101.1234567L; i > 0; i -= 1.0) {
+  for (long double i = 1011.1234562321323327L; i > 0; i -= 1.0) {
     for (int f = 0; f < 11; f++) {
       s21_sprintf(my, lg_in[f], i, i, i, (long double)f);
       sprintf(sys, lg_in[f], i, i, i, (long double)f);

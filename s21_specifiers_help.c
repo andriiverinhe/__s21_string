@@ -448,7 +448,7 @@ int process_le(char *str_out, ld arg_ld, arg_info s_arg_inf, char e,
 
 int offset_e(double n) {
   int off = 0;
-  if (!(n)) return off;
+  if (n == 0.0) return off;
   if ((int)n != 0) {
     while ((int)n / 10 != 0) {
       n /= 10;
@@ -465,7 +465,7 @@ int offset_e(double n) {
 
 int offset_le(ld n) {
   int off = 0;
-  if (!(n)) return off;
+  if (n == 0.0) return off;
   if ((int)n != 0) {
     while ((int)n / 10 != 0) {
       n /= 10;

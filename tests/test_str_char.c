@@ -1,7 +1,7 @@
 #include "../s21_sprintf.h"
 
 char *s_in[] = {"%s %s yes",      "%.0s %.s\n",         "%.s %s\n",
-                "%1s \n",     "%+ 050s %+ 050s\n", "%-50s %.20s\n",
+                "%1s \n",     "%+ 050hs %+ 050s\n", "%-50s %.20s\n",
                 "%020s %s\n", "%20.10s %s\n",      "%-20.10s %s\n",
                 "%.25s %s\n", "%s %.25s\n"};
 char *c_in[] = {"%c %c i:%d f:%d", "%.0c %.c i:%d f:%d\n",         "%.c %c i:%d f:%d\n",
@@ -151,7 +151,7 @@ START_TEST(c3_wchar) {
   char my[100000] = "";
   char sys[100000] = "";
   char str[] = "also some string to add";
-  char f[] = "%*lc %*lc %*lc %lc %lc %lc %lc %s";
+  char f[] = "%*lc %*lc %*lc %Lc %Lc %lc %lc %s";
   for (wchar_t ch = L' '; ch < 255; ch++) {
     s21_sprintf(my, f, ch, ch, ch, ch, ch, ch, ch, ch, ch, ch, str);
     sprintf(sys, f, ch, ch, ch, ch, ch, ch, ch, ch, ch, ch, str);
