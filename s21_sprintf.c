@@ -38,5 +38,5 @@ int s21_sprintf(char *str, char *format, ...) {
   }
 
   va_end(args);
-  return 0;
+  return strlen(str);
 }

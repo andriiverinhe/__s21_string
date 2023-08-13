@@ -1,13 +1,20 @@
 #include "../s21_sprintf.h"
 
-char *s_in[] = {"%s %s yes",      "%.0s %.s\n",         "%.s %s\n",
+char *s_in[] = {"%s %s yes",  "%.0s %.s\n",         "%.s %s\n",
                 "%1s \n",     "%+ 050hs %+ 050s\n", "%-50s %.20s\n",
-                "%020s %s\n", "%20.10s %s\n",      "%-20.10s %s\n",
+                "%020s %s\n", "%20.10s %s\n",       "%-20.10s %s\n",
                 "%.25s %s\n", "%s %.25s\n"};
-char *c_in[] = {"%c %c i:%d f:%d", "%.0c %.c i:%d f:%d\n",         "%.c %c i:%d f:%d\n",
-                "%1c %-c i:%d f:%d\n",     "%+ 050c %+ 050c i:%d f:%d\n", "%-50c %.20c i:%d f:%d\n",
-                "%020c %c i:%d f:%d\n", "%20.10c %c i:%d f:%d\n",      "%-20.10c %c i:%d f:%d\n",
-                "%.25c %c i:%d f:%d\n", "%c %.25c i:%d f:%d\n"};
+char *c_in[] = {"%c %c i:%d f:%d",
+                "%.0c %.c i:%d f:%d\n",
+                "%.c %c i:%d f:%d\n",
+                "%1c %-c i:%d f:%d\n",
+                "%+ 050c %+ 050c i:%d f:%d\n",
+                "%-50c %.20c i:%d f:%d\n",
+                "%020c %c i:%d f:%d\n",
+                "%20.10c %c i:%d f:%d\n",
+                "%-20.10c %c i:%d f:%d\n",
+                "%.25c %c i:%d f:%d\n",
+                "%c %.25c i:%d f:%d\n"};
 
 START_TEST(s1_small) {
   char str[] = "test string";
@@ -126,8 +133,8 @@ START_TEST(c1_norm) {
   char sys[1000] = "";
   for (int ch = 0; ch < 255; ch++) {
     for (int f = 0; f < 11; f++) {
-      s21_sprintf(my, c_in[f], (char) ch, (char)ch, ch, f);
-      sprintf(sys, c_in[f], (char) ch, (char)ch, ch, f);
+      s21_sprintf(my, c_in[f], (char)ch, (char)ch, ch, f);
+      sprintf(sys, c_in[f], (char)ch, (char)ch, ch, f);
       ck_assert_str_eq(my, sys);
     }
   }
@@ -160,6 +167,17 @@ START_TEST(c3_wchar) {
 }
 END_TEST
 
+START_TEST(s7_break_parser) {
+  char my[100000] = "";
+  char sys[100000] = "";
+  char str[] = "also some string to add";
+  char f[] = "%++s %--s\n";
+  s21_sprintf(my, f, str);
+  sprintf(sys, f, str);
+  ck_assert_str_eq(my, sys);
+}
+END_TEST
+
 Suite *suit(void) {
   Suite *s = suite_create("s_c spefs");
   TCase *tc = tcase_create("string");
@@ -170,6 +188,8 @@ Suite *suit(void) {
   tcase_add_test(tc, s4_wide);
   tcase_add_test(tc, s5_non_empty);
   tcase_add_test(tc, s6_big);
+  tcase_add_test(tc, s7_break_parser);
+  
   TCase *tc2 = tcase_create("char");
   tcase_add_test(tc2, c1_norm);
   tcase_add_test(tc2, c2_args);
