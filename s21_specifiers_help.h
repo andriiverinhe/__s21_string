@@ -28,6 +28,7 @@ int offset_le(ld n);
 void rtrzrs(char *res, arg_info s_arg);
 void add_postfix(char *str_res, int offset, char e);
 void process_g(char *str_out, double arg_d, arg_info s_arg_inf, char e);
+void process_lg(char *str_out, ld arg_ld, arg_info s_arg_inf, char e);
 void add_nan(char *str, arg_info s_arg_inf, ld x);
 void add_inf(char *str, arg_info s_arg_inf, ld x);
 

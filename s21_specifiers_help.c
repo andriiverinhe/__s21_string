@@ -335,7 +335,7 @@ bool get_eg_arg(char *str_out, arg_info s_arg_inf, va_list va_list, char e) {
       if (e == 'e' || e == 'E')
         process_le(str_out, arg_ld, s_arg_inf, e, false);
       else
-        process_g(str_out, arg_ld, s_arg_inf, (int)e - 2);
+        process_lg(str_out, arg_ld, s_arg_inf, (int)e - 2);
     }
   } else {
     double arg_d = va_arg(va_list, double);
