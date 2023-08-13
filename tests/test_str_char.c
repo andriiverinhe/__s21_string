@@ -171,7 +171,7 @@ START_TEST(s7_break_parser) {
   char my[100000] = "";
   char sys[100000] = "";
   char str[] = "also some string to add";
-  char f[] = "%++s %--s\n";
+  char f[] = "%++s %--s %lls\n";
   s21_sprintf(my, f, str);
   sprintf(sys, f, str);
   ck_assert_str_eq(my, sys);
