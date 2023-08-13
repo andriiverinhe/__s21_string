@@ -82,53 +82,32 @@ int wstr_len(wchar_t *str) {
 /*******************************************************************/
 bool get_u_arg(char *str_out, arg_info s_arg_inf, va_list va_list, char spc) {
   arg_u arg_u;
-  bool error = false;
 
   if (s_arg_inf.ll) {
     arg_u = va_arg(va_list, long long unsigned int);
-    if (arg_u <= ULONG_MAX) {
-      printf(
-          "The function expects long long unsigned int, but the value is "
-          "smaller\n");
-      error = true;
-    }
   } else if (s_arg_inf.l) {
     arg_u = va_arg(va_list, long unsigned int);
-    if (arg_u > ULONG_MAX || (arg_u <= UINT_MAX)) {
-      printf(
-          "The function expects long unsigned int, but the value is of other "
-          "type\n");
-      error = true;
-    }
   } else if (s_arg_inf.h) {
     // воспроизвести overflow состояние оригинальной функции
     short unsigned sh = va_arg(va_list, unsigned int);
     arg_u = sh;
   } else {
     arg_u = va_arg(va_list, unsigned int);
-    if (arg_u > UINT_MAX) {
-      printf(
-          "The function expects long unsigned int, but the value is of other "
-          "type\n");
-      error = true;
-    }
   }
-  if (!error) process_u_int(str_out, arg_u, s_arg_inf, spc);
-  return error;
+  process_u_int(str_out, arg_u, s_arg_inf, spc);
+  return false;
 }
 
 void process_int(char *str_out, arg_int s, arg_info s_arg_inf) {
   int str_size = size_out(s_arg_inf);
   char *str_nosign = calloc(str_size, sizeof(char));
   char *str_res = calloc(str_size, sizeof(char));
-
+  bool sign = add_sign(str_res, s, s_arg_inf);
   if (s_arg_inf.precision) {
     int_to_str(s, str_nosign, *s_arg_inf.precision);
-    add_sign(str_res, s, s_arg_inf);
   } else if (s_arg_inf.width) {
-    if (add_sign(str_res, s, s_arg_inf))
-      *s_arg_inf.width = *s_arg_inf.width - 1;
-    int_to_str(s, str_nosign, ((s_arg_inf.zeros) ? *s_arg_inf.width : 1));
+    int_to_str(s, str_nosign,
+               ((s_arg_inf.zeros) ? *s_arg_inf.width - (int)sign : 1));
   } else {
     int_to_str(s, str_nosign, 1);
   }
@@ -165,10 +144,9 @@ void process_u_int(char *str_out, arg_u u, arg_info s_arg_inf, char den) {
 
 int int_to_str(arg_int x, char *str, int d) {
   int i = 0;
-  arg_int xp = arg_abs(x);
-  while (xp) {
-    str[i++] = (xp % 10) + '0';
-    xp = xp / 10;
+  while (x) {
+    str[i++] = llabs((x % 10)) + '0';
+    x = x / 10;
   }
   while (i < d) str[i++] = '0';
   reverse(str, i);
@@ -183,7 +161,7 @@ int u_int_to_str(arg_u x, char *str, int z, char den, arg_info s) {
   if (den == 'x' || den == 'X') d = 16;
 
   int i = 0;
-  int saved = x;
+  arg_u saved = x;
   if (d <= 10) {
     while (x) {
       str[i++] = (x % d) + '0';
@@ -221,13 +199,13 @@ void reverse(char *str, int len) {
   }
 }
 
-bool add_sign(char *str, arg_int x, arg_info s_arg_inf) {
+bool add_sign(char *str, ld x, arg_info s_arg_inf) {
   bool res = false;
-  if (s_arg_inf.plus && x > 0) {
+  if (s_arg_inf.plus && x >= 0) {
     str[0] = '+';
     res = true;
   }
-  if (s_arg_inf.space && x > 0) {
+  if (s_arg_inf.space && x >= 0) {
     str[0] = ' ';
     res = true;
   }
@@ -238,10 +216,6 @@ bool add_sign(char *str, arg_int x, arg_info s_arg_inf) {
   return res;
 }
 
-arg_int arg_abs(arg_int x) {
-  if (x < 0) return x * (-1);
-  return x;
-}
 // END INT
 
 // START DOUBLE
@@ -259,31 +233,77 @@ void process_ldouble(char *str_out, ld arg_ld, arg_info s_arg_inf) {
 void process_double(char *str_out, double arg_d, arg_info s_arg_inf) {
   int res_size = size_out(s_arg_inf);
   char *res = calloc(res_size, sizeof(char));
-
   ftoa(arg_d, res, res_size, ((s_arg_inf.precision) ? *s_arg_inf.precision : 6),
        s_arg_inf);
   add_width_to_out(str_out, res, s_arg_inf);
   free(res);
 }
 
-void lftoa(ld n, char *res, int r_size, int afterpoint, arg_info s_arg_inf) {
+void rnddblstr(char *res, int sz, int fint) {
+  int one_rem = (fint > 4);
+  int ti = 0;
+  sz = sz - (res[sz] == '\0');
+  if (one_rem) {
+    char *temp = calloc(sz + NUM_STR, sizeof(char));
+    while (sz >= 0 && one_rem) {
+      if (res[sz] == '.') {
+        temp[ti++] = res[sz--];
+        continue;
+      }
+      int c = (res[sz--] - '0') + one_rem;
+      temp[ti++] = (c % 10) + '0';
+      one_rem = (c > 9);
+    }
+
+    while (sz >= 0) temp[ti++] = res[sz--];
+    if (one_rem) temp[ti++] = '1';
+    reverse(temp, ti);
+    strcpy(res, temp);
+    free(temp);
+  }
+}
+
+ld raw_ldblconv(char *res, int a, ld n, arg_info s_arg_inf) {
   arg_int ipart = (arg_int)n;
-  ld fpart = n - (ld)ipart;
+  ld fpart = fabsl(n - (ld)ipart);
+  int i = int_to_str(ipart, res, 0);
+
+  if (!i) res[i++] = '0';
+  if (s_arg_inf.hash) res[i] = '.';
+  if (a > 0) {
+    res[i++] = '.';
+    while (a--) {
+      (fpart) *= 10;
+      res[i++] = ((int)(fpart) + '0');
+      fpart = fpart - (ld)(int)fpart;
+    }
+  }
+  return fpart;
+}
+
+double raw_dblconv(char *res, int a, double n, arg_info s_arg_inf) {
+  arg_int ipart = (arg_int)n;
+  double fpart = fabs(n - (double)ipart);
   int i = int_to_str(ipart, res, 0);
   if (!i) res[i++] = '0';
   if (s_arg_inf.hash) res[i] = '.';
-  if (afterpoint != 0) {
-    res[i] = '.';
-    fpart = fpart * pow(10, afterpoint);
-
-    int_to_str((arg_int)fpart, res + i + 1, afterpoint);
+  if (a > 0) {
+    res[i++] = '.';
+    while (a--) {
+      (fpart) *= 10;
+      res[i++] = ((int)(fpart) + '0');
+      fpart = fpart - (double)(int)fpart;
+    }
   }
+  return fpart;
+}
+
+void add_dblwid(ld x, int r_size, char *res, arg_info s_arg_inf) {
   char *signedres = calloc(r_size, sizeof(char));
-  int comp = (!n) ? 0 : ((n > 0) ? 1 : -1);
-  int sign = add_sign(signedres, comp, s_arg_inf);
+  int sign = add_sign(signedres, x, s_arg_inf);
   if (s_arg_inf.width && s_arg_inf.zeros) {
     int real_w = *s_arg_inf.width - strlen(res) - sign;
-    memset(signedres + sign, '0', real_w);
+    memset(signedres + sign, '0', ((real_w > 0) ? real_w : 0));
   }
   strcat(signedres, res);
   strcpy(res, signedres);
@@ -291,126 +311,172 @@ void lftoa(ld n, char *res, int r_size, int afterpoint, arg_info s_arg_inf) {
 }
 
 void ftoa(double n, char *res, int r_size, int afterpoint, arg_info s_arg_inf) {
-  arg_int ipart = (arg_int)n;
-  double fpart = n - (double)ipart;
-  int i = int_to_str(ipart, res, 0);
-  if (!i) res[i++] = '0';
-  if (s_arg_inf.hash) res[i] = '.';
-  if (afterpoint != 0) {
-    res[i] = '.';
-    fpart = fpart * pow(10, afterpoint);
-    int_to_str((arg_int)fpart, res + i + 1, afterpoint);
-  }
-  char *signedres = calloc(r_size, sizeof(char));
-  int comp = (!n) ? 0 : ((n > 0) ? 1 : -1);
-  int sign = add_sign(signedres, comp, s_arg_inf);
-  if (s_arg_inf.width && s_arg_inf.zeros) {
-    int real_w = *s_arg_inf.width - strlen(res) - sign;
-    memset(signedres + sign, '0', real_w);
-  }
-  strcat(signedres, res);
-  strcpy(res, signedres);
-  free(signedres);
+  double fpart = raw_dblconv(res, afterpoint, n, s_arg_inf);
+  rnddblstr(res, strlen(res), (int)(fpart * 10));
+  add_dblwid(n, r_size, res, s_arg_inf);
 }
+
+void lftoa(ld n, char *res, int r_size, int afterpoint, arg_info s_arg_inf) {
+  ld fpart = raw_ldblconv(res, afterpoint, n, s_arg_inf);
+  rnddblstr(res, strlen(res), (int)(fpart * 10));
+  add_dblwid(n, r_size, res, s_arg_inf);
+}
+
 // SCIENTIFIC NOTATION //
 /*******************************************************************/
 bool get_eg_arg(char *str_out, arg_info s_arg_inf, va_list va_list, char e) {
-  bool error = false;
   if (s_arg_inf.L) {
     ld arg_ld = va_arg(va_list, long double);
-    if (isnanf(arg_ld)) {
-      error = true;
-    }
-    if (!error) {
-      if (e == 'e' || e == 'E') process_e(str_out, 0, arg_ld, s_arg_inf, e);
+    if (isnanl(arg_ld)) {
+      add_nan(str_out, s_arg_inf, arg_ld);
+    } else if (isinfl(arg_ld)) {
+      add_inf(str_out, s_arg_inf, arg_ld);
+    } else {
+      if (e == 'e' || e == 'E')
+        process_le(str_out, arg_ld, s_arg_inf, e, false);
+      else
+        process_g(str_out, arg_ld, s_arg_inf, (int)e - 2);
     }
   } else {
     double arg_d = va_arg(va_list, double);
-    if (isnanf(arg_d)) {
-      error = true;
-    }
-    if (!error) {
+    if (isnan(arg_d)) {
+      add_nan(str_out, s_arg_inf, arg_d);
+    } else if (isinf(arg_d)) {
+      add_inf(str_out, s_arg_inf, arg_d);
+    } else {
       if (e == 'e' || e == 'E')
-        process_e(str_out, 0, arg_d, s_arg_inf, e);
+        process_e(str_out, arg_d, s_arg_inf, e, false);
       else
         process_g(str_out, arg_d, s_arg_inf, (int)e - 2);
     }
   }
-  return error;
+  return false;
 }
 
-void prep_e_dbl(double arg_d, int res_size, char *res, int adj,
-                arg_info s_arg) {
-  arg_d = arg_d * pow(10, adj);
-  arg_int r = (arg_int)round(arg_d) % 10;
-  arg_d = round(arg_d) / pow(10, adj);
-  ftoa(arg_d, res, res_size, adj, s_arg);
-  int i = strlen(res);
-  if (res[i - 1] != '.') {
-    // поправка на потерю точности после деления double
-    res[i - 1] = r + '0';
+bool move_p(char *str) {
+  int i = 0;
+  bool p = false;
+  while (str[i] != '\0') {
+    if (str[i] == '.') {
+      p = true;
+      while (i - 1 > 0) {
+        str[i] = str[i - 1];
+        str[i - 1] = '.';
+        i--;
+      }
+      break;
+    }
+    i++;
   }
+  return p;
 }
 
-void prep_e_ldbl(ld arg_ld, int res_size, char *res, int adj, arg_info s_arg) {
-  arg_ld = arg_ld * pow(10, adj);
-  arg_ld = round(arg_ld) / pow(10, adj);
-  ftoa(arg_ld, res, res_size, adj, s_arg);
+bool rem_e_z(char *res, arg_info s_arg) {
+  if (res[1] != '.' && res[1] != '\0') {
+    if (res[2] != '\0') {
+      res[2] = res[1];
+    }
+    res[1] = '.';
+    res[strlen(res) - 1] = '\0';
+    if (s_arg.hash) res[1] = '.';
+    if (res[2] == '\0' && !s_arg.hash) res[1] = '\0';
+    return true;
+  }
+  // 100 -> 1.0 || 1 || 1.
+  // 10.43123 -> 1.04312
+  return false;
 }
 
-void process_e(char *str_out, double arg_d, ld arg_ld, arg_info s_arg_inf,
-               char e) {
-  int off = (s_arg_inf.L) ? offset_le(&arg_ld) : offset_e(&arg_d);
+int process_e(char *str_out, double arg_d, arg_info s_arg_inf, char e,
+              bool rmtrzrs) {
+  int off = offset_e(arg_d);
   int res_size = size_out(s_arg_inf);
-  int postfix = 4;
   char *res = calloc(res_size, sizeof(char));
-  if (s_arg_inf.width) *s_arg_inf.width = *s_arg_inf.width - postfix;
   int adj = ((s_arg_inf.precision) ? *s_arg_inf.precision : 6);
-  if (s_arg_inf.L) {
-    prep_e_ldbl(arg_ld, res_size, res, adj, s_arg_inf);
+  adj = (adj < 0) ? 0 : adj;
+  if (off > 0) {
+    raw_dblconv(res, adj, arg_d, s_arg_inf);
+    int b = adj + move_p(res) + 1;
+    if (res[b] != '\0') {
+      int fint = res[b] - '0';
+      res[b] = '\0';
+      rnddblstr(res, strlen(res), fint);
+      if (rem_e_z(res, s_arg_inf)) off++;
+    }
   } else {
-    prep_e_dbl(arg_d, res_size, res, adj, s_arg_inf);
+    double fpart = raw_dblconv(res, adj, arg_d * pow(10, abs(off)), s_arg_inf);
+    rnddblstr(res, strlen(res), (int)(fpart * 10));
+    if (rem_e_z(res, s_arg_inf)) off++;
   }
+  if (rmtrzrs) rtrzrs(res, s_arg_inf);
   add_postfix(res, off, e);
+  add_dblwid(arg_d, res_size, res, s_arg_inf);
   add_width_to_out(str_out, res, s_arg_inf);
   free(res);
+  return off;
 }
 
-int offset_e(double *n) {
+int process_le(char *str_out, ld arg_ld, arg_info s_arg_inf, char e,
+               bool rmtrzrs) {
+  int off = offset_le(arg_ld);
+  int res_size = size_out(s_arg_inf);
+  char *res = calloc(res_size, sizeof(char));
+  int adj = ((s_arg_inf.precision) ? *s_arg_inf.precision : 6);
+  adj = (adj < 0) ? 0 : adj;
+  if (off > 0) {
+    raw_ldblconv(res, adj, arg_ld, s_arg_inf);
+    bool p = move_p(res);
+    int b = adj + p + 1;
+    if (res[b] != '\0') {
+      int fint = res[b] - '0';
+      res[b] = '\0';
+      rnddblstr(res, strlen(res), fint);
+      if (rem_e_z(res, s_arg_inf)) off++;
+    }
+  } else {
+    ld fpart = raw_ldblconv(res, adj, arg_ld * pow(10, abs(off)), s_arg_inf);
+    rnddblstr(res, strlen(res), (arg_int)(fpart * 10));
+    if (rem_e_z(res, s_arg_inf)) off++;
+  }
+  if (rmtrzrs) rtrzrs(res, s_arg_inf);
+  add_postfix(res, off, e);
+  add_dblwid(arg_ld, res_size, res, s_arg_inf);
+  add_width_to_out(str_out, res, s_arg_inf);
+  free(res);
+  return off;
+}
+
+int offset_e(double n) {
   int off = 0;
-  double res = *n;
-  if ((int)res != 0) {
-    while ((int)res / 10 != 0) {
-      res /= 10;
+  if (!(n)) return off;
+  if ((int)n != 0) {
+    while ((int)n / 10 != 0) {
+      n /= 10;
       off++;
     }
-    // компенсируем потерю точности double при делении
-    *n = *n / pow(10, off);
   } else {
-    while (!(int)res) {
-      res *= 10;
+    while (!(int)n) {
+      n *= 10;
       off--;
     }
-    *n = *n * pow(10, abs(off));
   }
   return off;
 }
 
-int offset_le(ld *n) {
+int offset_le(ld n) {
   int off = 0;
-  ld res = *n;
-  if ((int)res != 0) {
-    while ((int)res / 10 != 0) {
-      res /= 10;
+  if (!(n)) return off;
+  if ((int)n != 0) {
+    while ((int)n / 10 != 0) {
+      n /= 10;
       off++;
     }
   } else {
-    while (!(int)res) {
-      res *= 10;
+    while (!(int)n) {
+      n *= 10;
       off--;
     }
   }
-  *n = res;
   return off;
 }
 
@@ -423,57 +489,90 @@ void add_postfix(char *str_res, int offset, char e) {
   strcat(str_res, post);
 }
 
-void remove_zeroes(char *res, arg_info s_arg) {
-  int z = 0;
-  for (size_t i = 0, s = 0; res[i] != '\0'; i++) {
-    if (res[i] == '.') s = 1;
-    if (z && res[i] != '0') z = 0;
-    if (res[i] == '0' && s && !z) z = i;
-  }
-  if (z) {
-    res[z] = '\0';
-    if (res[z - 1] == '.' && !s_arg.hash) res[z - 1] = '\0';
+void rtrzrs(char *res, arg_info s_arg) {
+  if (!s_arg.hash) {
+    int z = 0;
+    for (size_t i = 0, s = 0; res[i] != '\0'; i++) {
+      if (res[i] == '.') s = 1;
+      if (z && res[i] != '0') z = 0;
+      if (res[i] == '0' && s && !z) z = i;
+    }
+    if (z) res[z] = '\0';
+    if (z && res[z - 1] == '.') res[z - 1] = '\0';
   }
 }
 
-void prep_gedbl(int off, double arg_d, int r_size, char *res, int adj,
-                arg_info s_arg, char e) {
-  int postfix = 4;
-  if (adj) adj--;
-  if (s_arg.width) *s_arg.width = *s_arg.width - postfix;
-  prep_e_dbl(arg_d, r_size, res, adj, s_arg);
-  remove_zeroes(res, s_arg);
-  add_postfix(res, off, e);
+void gftoa(double n, char *res, int r_size, int afterpoint,
+           arg_info s_arg_inf) {
+  double fpart = raw_dblconv(res, afterpoint, n, s_arg_inf);
+  rnddblstr(res, strlen(res), (int)(fpart * 10));
+  rtrzrs(res, s_arg_inf);
+  add_dblwid(n, r_size, res, s_arg_inf);
+}
+
+void lgftoa(ld n, char *res, int r_size, int afterpoint, arg_info s_arg_inf) {
+  ld fpart = raw_ldblconv(res, afterpoint, n, s_arg_inf);
+  rnddblstr(res, strlen(res), (arg_int)(fpart * 10));
+  rtrzrs(res, s_arg_inf);
+  add_dblwid(n, r_size, res, s_arg_inf);
 }
 
 void process_g(char *str_out, double arg_d, arg_info s_arg_inf, char e) {
   int res_size = size_out(s_arg_inf);
-  char *dbl_str = calloc(res_size, sizeof(char));
-  double copy_d = arg_d;
-  int offset = offset_e(&copy_d);
+  char *res_str = calloc(res_size, sizeof(char));
   int adj = ((s_arg_inf.precision) ? *s_arg_inf.precision : 6);
+  if (!s_arg_inf.precision) {
+    int s = 6;
+    s_arg_inf.precision = &s;
+  }
+  (*s_arg_inf.precision)--;
+  int offset = process_e(res_str, arg_d, s_arg_inf, e, true);
   if (offset < 0) {
     if (offset > -5) {
-      prep_e_dbl(arg_d, res_size, dbl_str, adj + abs(offset) - 1, s_arg_inf);
-      remove_zeroes(dbl_str, s_arg_inf);
-    } else {
-      prep_gedbl(offset, copy_d, res_size, dbl_str, adj, s_arg_inf, e);
+      memset(res_str, '\0', strlen(res_str));
+      gftoa(arg_d, res_str, res_size, (adj + (abs(offset) - (adj != 0))),
+            s_arg_inf);
     }
   } else {
-    if (offset + 1 > adj) {
-      prep_gedbl(offset, copy_d, res_size, dbl_str, adj, s_arg_inf, e);
-    } else {
-      prep_e_dbl(arg_d, res_size, dbl_str, adj - (offset + 1), s_arg_inf);
-      remove_zeroes(dbl_str, s_arg_inf);
+    if (offset < adj || (!offset && !adj)) {
+      memset(res_str, '\0', strlen(res_str));
+      gftoa(arg_d, res_str, res_size, (adj - (abs(offset) + (adj != 0))),
+            s_arg_inf);
     }
   }
-  add_width_to_out(str_out, dbl_str, s_arg_inf);
-  free(dbl_str);
+  add_width_to_out(str_out, res_str, s_arg_inf);
+  free(res_str);
+}
+
+void process_lg(char *str_out, ld arg_ld, arg_info s_arg_inf, char e) {
+  int res_size = size_out(s_arg_inf);
+  char *res_str = calloc(res_size, sizeof(char));
+  int adj = ((s_arg_inf.precision) ? *s_arg_inf.precision : 6);
+  if (!s_arg_inf.precision) {
+    int s = 6;
+    s_arg_inf.precision = &s;
+  }
+  (*s_arg_inf.precision)--;
+  int offset = process_le(res_str, arg_ld, s_arg_inf, e, true);
+  if (offset < 0) {
+    if (offset > -5) {
+      memset(res_str, '\0', strlen(res_str));
+      lgftoa(arg_ld, res_str, res_size, (adj + (abs(offset) - (adj != 0))),
+             s_arg_inf);
+    }
+  } else {
+    if (offset < adj || (!offset && !adj)) {
+      memset(res_str, '\0', strlen(res_str));
+      lgftoa(arg_ld, res_str, res_size, (adj - (abs(offset) + (adj != 0))),
+             s_arg_inf);
+    }
+  }
+  add_width_to_out(str_out, res_str, s_arg_inf);
+  free(res_str);
 }
 
 void add_width_to_out(char *str_out, char *temp, arg_info s_arg_inf) {
   bool added = false;
-
   if (s_arg_inf.width) {
     int shift = *s_arg_inf.width - strlen(temp);
     if (s_arg_inf.minus && shift > 0) {
@@ -500,4 +599,21 @@ int size_out(arg_info s_arg_inf) {
   if (s_arg_inf.precision) str_size += *s_arg_inf.precision;
   if (s_arg_inf.width) str_size += *s_arg_inf.width;
   return str_size;
+}
+
+void add_nan(char *str, arg_info s_arg_inf, ld x) {
+  x = 1;
+  char n[] = "nan";
+  char s[10] = "";
+  add_sign(s, x, s_arg_inf);
+  strcat(s, n);
+  add_width_to_out(str, s, s_arg_inf);
+}
+
+void add_inf(char *str, arg_info s_arg_inf, ld x) {
+  char n[] = "inf";
+  char s[10] = "";
+  add_sign(s, x, s_arg_inf);
+  strcat(s, n);
+  add_width_to_out(str, s, s_arg_inf);
 }

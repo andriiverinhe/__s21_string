@@ -12,6 +12,7 @@
 #include <string.h>
 #include <float.h>
 #include <check.h>
+#include <inttypes.h>
 
 #define NUM_STR 64
 typedef struct {
@@ -37,6 +38,7 @@ typedef struct {
 typedef long long int arg_int;
 typedef long long unsigned int arg_u;
 typedef long double ld;
+#define SHOW_ERROR false
 #include "s21_specifiers_help.h"
 
 bool specifier_c(char *str_out, arg_info *s_arg_inf, va_list va_list);

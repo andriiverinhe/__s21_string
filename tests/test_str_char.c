@@ -11,7 +11,7 @@ char *c_in[] = {"%c %c i:%d f:%d", "%.0c %.c i:%d f:%d\n",         "%.c %c i:%d 
 
 START_TEST(s1_small) {
   char str[] = "test string";
-  char str2[] = "";
+  char str2[] = "MBJR WBAPU 7C";
   char out_my[1000] = "";
   char out_sys[1000] = "";
   for (int i = 0; i < 11; i++) {
@@ -36,8 +36,8 @@ START_TEST(s2_spec_sym) {
 END_TEST
 
 START_TEST(s3_aster) {
-  char str[] = "first test string";
-  char str2[] = "end string";
+  char str[] = "WAR IS PEACE FREEDOM IS SLAVERY IGNORANCE IS STRENGTH";
+  char str2[] = "MBJR WBAPU 7C";
   char out_my[1000] = "";
   char out_sys[1000] = "";
   int w1 = 10;
@@ -147,9 +147,23 @@ START_TEST(c2_args) {
 }
 END_TEST
 
+START_TEST(c3_wchar) {
+  char my[100000] = "";
+  char sys[100000] = "";
+  char str[] = "also some string to add";
+  char f[] = "%*lc %*lc %*lc %lc %lc %lc %lc %s";
+  for (wchar_t ch = L' '; ch < 255; ch++) {
+    s21_sprintf(my, f, ch, ch, ch, ch, ch, ch, ch, ch, ch, ch, str);
+    sprintf(sys, f, ch, ch, ch, ch, ch, ch, ch, ch, ch, ch, str);
+    ck_assert_str_eq(my, sys);
+  }
+}
+END_TEST
+
 Suite *suit(void) {
   Suite *s = suite_create("s_c spefs");
   TCase *tc = tcase_create("string");
+
   tcase_add_test(tc, s1_small);
   tcase_add_test(tc, s2_spec_sym);
   tcase_add_test(tc, s3_aster);
@@ -159,6 +173,7 @@ Suite *suit(void) {
   TCase *tc2 = tcase_create("char");
   tcase_add_test(tc2, c1_norm);
   tcase_add_test(tc2, c2_args);
+  tcase_add_test(tc2, c3_wchar);
   suite_add_tcase(s, tc);
   suite_add_tcase(s, tc2);
   return s;

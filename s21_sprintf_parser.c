@@ -48,10 +48,8 @@ bool are_we_far_in_format(arg_info *s_arg_inf) {
 bool is_space(char ch_now, arg_info *s_arg_inf, bool pr, bool wd) {
   if (ch_now == ' ') {
     if (s_arg_inf->plus || are_we_far_in_format(s_arg_inf) ||
-        s_arg_inf->space || pr || wd) {
-      s_arg_inf->plus = false;
+        s_arg_inf->space || pr || wd)
       return true;
-    }
     s_arg_inf->space = true;
   }
   return false;
@@ -60,8 +58,9 @@ bool is_space(char ch_now, arg_info *s_arg_inf, bool pr, bool wd) {
 bool is_plus(char ch_now, arg_info *s_arg_inf, bool pr, bool wd) {
   if (ch_now == '+') {
     s_arg_inf->space = false;
-    if (s_arg_inf->plus || are_we_far_in_format(s_arg_inf) || pr || wd)
+    if (s_arg_inf->plus || are_we_far_in_format(s_arg_inf) || pr || wd) {
       return true;
+    }
     s_arg_inf->plus = true;
   }
   return false;
@@ -200,20 +199,24 @@ bool is_not_valid_combo(char spcf, arg_info *s_arg_inf) {
   if (s_arg_inf->L &&
       (spcf != 'e' && spcf != 'E' && spcf != 'f' && spcf != 'g' && spcf != 'G'))
     error = true;
-  if ((spcf == 's' || spcf == 'c' || spcf == 'p') &&
+  if ((spcf == 's' || spcf == 'c') &&
       (s_arg_inf->zeros || s_arg_inf->space || s_arg_inf->plus)) {
     s_arg_inf->zeros = false;
     s_arg_inf->space = false;
     s_arg_inf->plus = false;
     error = true;
   }
-  if (s_arg_inf->zeros && s_arg_inf->precision &&
+  if ((s_arg_inf->minus && s_arg_inf->zeros) || (s_arg_inf->zeros && s_arg_inf->precision &&
       (spcf == 'd' || spcf == 'i' || spcf == 'o' || spcf == 'x' ||
-       spcf == 'X' || spcf == 'u')) {
+       spcf == 'X' || spcf == 'u' || spcf == 'p'))) {
     error = true;
     s_arg_inf->zeros = false;
   }
   if ((s_arg_inf->space || s_arg_inf->plus) && spcf == 'u') error = true;
+  if ((s_arg_inf->space && s_arg_inf->plus)) {
+    s_arg_inf->space = false;
+    error = true;
+  }
   return error;
 }
 
@@ -253,7 +256,7 @@ char *parse_format_arg(arg_info *s_arg_inf, va_list args, char *ch_now,
   }
   *func_ind = i;
   if (is_not_valid_combo(valid_specifiers[i], s_arg_inf)) error = true;
-  if (error) {
+  if (error && SHOW_ERROR) {
     printf("Incorrect flag use in formatting or used invalid specifier.\n");
   }
   return ch_now;

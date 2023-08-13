@@ -24,37 +24,19 @@ bool specifier_c(char *str_out, arg_info *s_arg_inf, va_list va_list) {
 
 bool specifier_i_or_d(char *str_out, arg_info *s_arg_inf, va_list va_list) {
   arg_int arg_int;
-  bool error = false;
   if (s_arg_inf->ll) {
     arg_int = va_arg(va_list, long long int);
-    if (arg_int <= LONG_MAX && arg_int >= LONG_MIN) {
-      printf("The function expects long long int!\n");
-      error = true;
-    }
   } else if (s_arg_inf->l) {
     arg_int = va_arg(va_list, long int);
-    if (arg_int > LONG_MAX || arg_int < LONG_MIN) {
-      printf("The function expects long int, but long long int was given\n");
-      error = true;
-    }
-    if (arg_int <= INT_MAX && arg_int >= INT_MIN) {
-      printf("The function expects long int, but int was given\n");
-      error = true;
-    }
   } else if (s_arg_inf->h) {
     // воспроизвести overflow состояние оригинальной функции
     short sh = va_arg(va_list, int);
     arg_int = sh;
   } else {
     arg_int = va_arg(va_list, int);
-    if (arg_int > INT_MAX || arg_int < INT_MIN) {
-      printf("The function expects int!\n");
-      error = true;
-    }
   }
-  if (!error)
-    process_int(str_out, arg_int, *s_arg_inf);
-  return error;
+  process_int(str_out, arg_int, *s_arg_inf);
+  return false;
 }
 
 bool specifier_u(char *str_out, arg_info *s_arg_inf, va_list va_list) {
@@ -75,42 +57,37 @@ bool specifier_o(char *str_out, arg_info *s_arg_inf, va_list va_list) {
 
 bool specifier_p(char *str_out, arg_info *s_arg_inf, va_list va_list) {
   uintptr_t address = va_arg(va_list, uintptr_t);
-  char buffer[20];
-  int len = 0;
-
-  while (address != 0) {
-    int remainder = address % 16;
-    char hex_digit = (remainder < 10) ? remainder + '0' : remainder - 10 + 'a';
-    buffer[len++] = hex_digit;
-    address /= 16;
+  if (!address)
+    add_width_to_out(str_out, "(nil)", *s_arg_inf);
+  else {
+    s_arg_inf->hash = true;
+    if (s_arg_inf->precision) (*s_arg_inf->precision) += 2;
+    process_u_int(str_out, address, *s_arg_inf, 'x');
   }
-  buffer[len++] = 'x';
-  buffer[len++] = '0';
-  reverse(buffer, len);
-  buffer[len] = '\0';
-  add_width_to_out(str_out, buffer, *s_arg_inf);
   return false;
 }
 
 bool specifier_f(char *str_out, arg_info *s_arg_inf, va_list va_list) {
-  bool error = false;
   if (s_arg_inf->L) {
     ld arg_d = va_arg(va_list, long double);
-    if (isnanf(arg_d)) {
-      error = true;
-    }
-    if (!error)
+    if (isinfl(arg_d)) {
+      add_inf(str_out, *s_arg_inf, arg_d);
+    } else if (isnanl(arg_d)) {
+      add_nan(str_out, *s_arg_inf, arg_d);
+    } else
       process_ldouble(str_out, arg_d, *s_arg_inf);
   } else {
     double arg_d = va_arg(va_list, double);
-    if (isnanf(arg_d)) {
-      error = true;
-    }
-    if (!error)
+
+    if (isnan(arg_d)) {
+      add_nan(str_out, *s_arg_inf, arg_d);
+    } else if (isinf(arg_d)) {
+      add_inf(str_out, *s_arg_inf, arg_d);
+    } else
       process_double(str_out, arg_d, *s_arg_inf);
   }
 
-  return error;
+  return false;
 }
 
 bool specifier_e(char *str_out, arg_info *s_arg_inf, va_list va_list) {
@@ -136,21 +113,20 @@ bool specifier_n(char *str_out, arg_info *s_arg_inf, va_list va_list) {
     arg_int *arg_i = va_arg(va_list, long long int *);
     if (arg_i == NULL)
       error = true;
-    else 
+    else
       *arg_i = len;
   } else if (s_arg_inf->l) {
     long int *arg_i = va_arg(va_list, long int *);
     if (arg_i == NULL)
       error = true;
-    else 
+    else
       *arg_i = len;
   } else {
     int *arg_i = va_arg(va_list, int *);
     if (arg_i == NULL)
       error = true;
-    else 
+    else
       *arg_i = len;
   }
   return error;
 }
-
